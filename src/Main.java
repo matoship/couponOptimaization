@@ -1,5 +1,5 @@
 import java.util.*;
-import java.util.stream.Collectors;
+
 
 class item {
     int id;
@@ -7,7 +7,11 @@ class item {
     int count;
     int price;
 
-    public item ( int id , int price , int count ) {
+    public item(int id) {
+        this.id = id;
+    }
+
+    public item(int id, int price, int count) {
         this.id = id;
         this.price = price;
         this.count = count;
@@ -15,7 +19,20 @@ class item {
     }
 
     @Override
-    public String toString ( ) {
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        item item = (item) o;
+        return id == item.id && val == item.val && count == item.count && price == item.price;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, val, count, price);
+    }
+
+    @Override
+    public String toString() {
         return "item{" +
                 "id=" + id +
                 ", total value=" + val +
@@ -27,84 +44,103 @@ class item {
 
 class coupon implements Comparable<coupon> {
 
-    List<Integer> combination = new ArrayList<> ( );
-    int val;
+    List<item> combination = new ArrayList<>();
+    int discount;
     int threshold;
     int id;
 
-    public coupon ( ) {
+    public coupon() {
     }
 
-    public coupon ( int id , List<Integer> combination , int val , int threshold ) {
+    public coupon(int id, List<item> combination, int val, int threshold) {
         this.id = id;
         this.combination = combination;
-        this.val = val;
+        this.discount = val;
         this.threshold = threshold;
     }
 
-    public boolean checkValidity ( int id ) {
-        for ( int j : combination ) {
-            if ( id == j && id != 0 ) return true;
+    public boolean checkValidity(item good) {
+        for (item item : combination) {
+            if (good.id == item.id && item.id != 0) return true;
         }
 
         return false;
     }
 
-    public void cloneCoupon ( coupon other,List<Integer> list ) {
+    public void cloneCoupon(coupon other, List<item> list) {
         this.id = other.id;
         this.threshold = other.threshold;
-        this.val = other.val;
-        this.combination=list;
+        this.discount = other.discount;
+        this.combination = list;
     }
 
     @Override
-    public String toString ( ) {
+    public String toString() {
         return "coupon{" +
                 "combination=" + combination +
-                ", val=" + val +
+                ", discount=" + discount +
                 ", threshold=" + threshold +
                 ", id=" + id +
                 '}';
     }
 
-    public int compareTo ( coupon other ) {
-        return other.val - this.val;
+    public int compareTo(coupon other) {
+        return other.discount - this.discount;
     }
 }
 
 //driver
 public class Main {
-    public static int getRandomNumber ( int max , int min ) {
-        Random random = new Random ( );
-        return random.nextInt ( max - min ) + min;
+    public static int getRandomNumber(int max, int min) {
+        Random random = new Random();
+        return random.nextInt(max - min) + min;
     }
 
-    public static final int NUMITEMS = 10;
-    public static final int NUMCOUPONS = 1000;
+    public static int getRandomNumber(int max, int min,HashSet<Integer> set) {
+        Random random = new Random();
+        int tmp = random.nextInt(max - min) + min;
+        if(set.add(tmp)){
+            return(tmp);
+        }
+        return getRandomNumber(max, min, set);
 
-    public static void main ( String[] args ) {
+    }
+
+    public static final int SHOPPINGCART = 99;
+    public static final int NUMCOUPONS = 1000;
+    public static final int NUMITEMS = 100000;
+
+    public static void main(String[] args) {
 
 
         int DISCOUNT = 50;
         int MAXPRICE = 1000;
         int MINPRICE = 100;
-        int MAXCOUNT = 1000;
-        //set items
-        item[] items = new item[NUMITEMS];
-        for ( int i = 0 ; i < NUMITEMS ; i++ ) {
-            items[i] = new item ( i , getRandomNumber ( MAXPRICE , MINPRICE ) , getRandomNumber ( MAXCOUNT , 1 ) );
+        int MAXCOUNT = 100;
+        //set all items
+        item[] allItems = new item[NUMITEMS];
+        item[] items = new item[SHOPPINGCART];
+        for (int i = 0; i < NUMITEMS; i++) {
+            allItems[i] = new item(i, getRandomNumber(MAXPRICE, MINPRICE), getRandomNumber(MAXCOUNT, 1));
         }
+
+        HashSet<Integer> nums = new HashSet<>();
+        for (int i = 0; i < SHOPPINGCART; i++) {
+            int tmp = 0;
+            tmp = getRandomNumber(NUMITEMS, 1,nums);
+            items[i]=allItems[tmp];
+        }
+        nums.clear();
+
         //set coupons;
         coupon[] coupons = new coupon[NUMCOUPONS];
-        for ( int i = 0 ; i < NUMCOUPONS ; i++ ) {
-            List<Integer> combs = new ArrayList<> ( );
-            for ( int j = 0 ; j < getRandomNumber ( NUMITEMS , 1 ) ; j++ ) {
-                combs.add ( getRandomNumber ( NUMITEMS , 1 ) );
+        for (int i = 0; i < NUMCOUPONS; i++) {
+            List<item> combs = new ArrayList<>();
+            for (int j = 0; j < getRandomNumber(100, 1); j++) {
+                combs.add(allItems[getRandomNumber(NUMITEMS,1,nums)]);
             }
-            combs = combs.stream ( )
-                    .distinct ( )
-                    .collect ( Collectors.toList ( ) );
-            coupons[i] = new coupon ( i , combs , getRandomNumber ( DISCOUNT , 1 ) , getRandomNumber ( 100 , 1 ) );
+            nums.clear();
+            coupons[i] = new coupon(i, combs, getRandomNumber(DISCOUNT, 1), getRandomNumber(100, 1));
         }
 //        for(int i=0;i<NUMITEMS;i++) {
 //            System.out.println(items[i].toString());
@@ -125,50 +161,52 @@ public class Main {
 //        coupons[3] = new coupon ( a8 , 6 , 10 );
 //        coupons[4] = new coupon ( a5 , 50 , 14 );
 
-        for(int i=0;i<NUMCOUPONS;i++) {
-            System.out.println(coupons[i].toString());
-        }
+//        for(int i=0;i<NUMCOUPONS;i++) {
+//            System.out.println(coupons[i].toString());
+//        }
 
-        List<coupon> validCoupon = new ArrayList<> ( );
-        couponRangeShrink ( items , coupons , validCoupon );
+        List<coupon> validCoupon = new ArrayList<>();
+        couponRangeShrink(items, coupons, validCoupon);
         //Arrays.sort ( validCoupon );
 //        Iterator i = validCoupon.iterator ();
 //        while(i.hasNext ()){
 //            System.out.println(i.next ().toString ());
 //        }
-        for ( coupon x : validCoupon ) {
-            System.out.println ( x.toString ( ) );
+        for (coupon x : validCoupon) {
+            System.out.println(x.toString());
         }
 //        int result = getBestDiscount ( coup );
 //        System.out.println ( result );
     }
 
-    public static void addTOSet ( int[] comb , HashSet<Integer> set ) {
-        for ( int j : comb ) {
-            set.add ( j );
+    public static void addTOSet(int[] comb, HashSet<Integer> set) {
+        for (int j : comb) {
+            set.add(j);
         }
     }
 
-    public static boolean isOverlapping ( int[] Comb , HashSet<Integer> set ) {
-        for ( int j : Comb ) {
-            if ( ( set.contains ( j ) ) ) {
+    public static boolean isOverlapping(int[] Comb, HashSet<Integer> set) {
+        for (int j : Comb) {
+            if ((set.contains(j))) {
                 return true;
             }
         }
         return false;
     }
 
-    public static void couponRangeShrink ( item[] items , coupon[] coupons , List<coupon> validCoupon ) {
-        for ( int i = 0 ; i < coupons.length ; i++ ) {
-            List<Integer> newList = new ArrayList<> ( );
-            coupon temp = new coupon ( );
-            for ( int j = 0 ; j < items.length ; j++ ) {
-                if ( coupons[i].checkValidity ( items[j].id ) ) {
-                    newList.add(items[j].id);
+    public static void couponRangeShrink(item[] items, coupon[] coupons, List<coupon> validCoupon) {
+        for (coupon coupon : coupons) {
+            List<item> newList = new ArrayList<>();
+            coupon temp = new coupon();
+            int sum = 0;
+            for (item item : items) {
+                if (coupon.checkValidity(item)) {
+                    sum = +item.val;
+                    newList.add(item);
                 }
             }
-            if(newList.size()>0){
-                temp.cloneCoupon ( coupons[i],newList );
+            if (newList.size() > 0 && sum >= coupon.threshold) {
+                temp.cloneCoupon(coupon, newList);
                 validCoupon.add(temp);
             }
         }
