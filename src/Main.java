@@ -1,4 +1,17 @@
 import java.util.*;
+/*
+question:
+Find the best combinations of the coupons for the shopping cart.
+Restrictions:
+cart size:99
+coupons size:2000;
+
+1. each coupon has a price barrier. For example, for a coupon {A,B,C,D} with price barrier of 20, it means a coupon may
+only be used when the overall price of items A,,B,C,D is greater than the price barrier.
+2. If an item is used in a coupon, any coupons that have the item included may not be used. For example, for coupon {A,B,C,D},
+{B,C,D},{B,D}, if coupon {B,C,D} is used, any other coupon can not be used as they all have item B included.
+ */
+
 
 /*
 bugs:
@@ -78,10 +91,11 @@ public class Main {
     System.out.println(result);
   }
 
-  public static boolean addToSet(List<coupon> validCoupon, HashSet<item> usedItem, int i) {
+  public static boolean checkCoupon(List<coupon> validCoupon, HashSet<item> usedItem, int i) {
     int idx = 0;
     int sum = 0;
     List<Integer> temp = new ArrayList<>();
+    // check if the current coupon has enough items that meet the price barrier.
     while (sum < validCoupon.get(i).threshold && idx < validCoupon.get(i).combination.size()) {
       if (!usedItem.contains(validCoupon.get(i).combination.get(idx))) {
         sum = sum + validCoupon.get(i).combination.get(idx).val;
@@ -101,6 +115,7 @@ public class Main {
   }
 
   public static void couponRangeShrink(item[] items, coupon[] coupons, List<coupon> validCoupon) {
+    //reduce the size of the coupon list. Put valid coupons in a new list.
     for (coupon coupon : coupons) {
       List<item> newList = new ArrayList<>();
       coupon temp = new coupon();
@@ -111,6 +126,8 @@ public class Main {
           newList.add(item);
         }
       }
+      //if the overall value of the items of the cart that included in the coupon is greater
+      // than the price barrier, put the coupon into the list. 
       if (newList.size() > 0 && sum >= coupon.threshold) {
         temp.cloneCoupon(coupon, newList);
         validCoupon.add(temp);
@@ -120,15 +137,16 @@ public class Main {
 
   public static int getBestOffer(List<coupon> validCoupon) {
     int bestDiscount = 0;
+    
     HashSet<item> usedItem = new HashSet<>();
     for (int i = 0; i < validCoupon.size(); i++) {
       int sum = 0;
-      if (addToSet(validCoupon, usedItem, i)) {
+      if (checkCoupon(validCoupon, usedItem, i)) {
         sum = validCoupon.get(i).discount;
       }
 
       for (int j = i + 1; j < validCoupon.size(); j++) {
-        if (addToSet(validCoupon, usedItem, j)) {
+        if (checkCoupon(validCoupon, usedItem, j)) {
           sum = sum + validCoupon.get(j).discount;
         }
       }
