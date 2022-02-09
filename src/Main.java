@@ -1,140 +1,221 @@
 import java.util.*;
 
-/*
-bugs:
-1.the algorithm always pick the first item of each coupon in every iteration. It ignores the possible combinations of
-picking the second, third item as its choice.
-2.the time complexity is around O(n^4) to O(n^3)
-3.the algorithm can't print which coupons have been used for the best discount combination.
-
-improving ideas:
-implement DP to the algorithm.
-*/
-// driver
 public class Main {
-  public static int getRandomNumber(int max, int min) {
-    Random random = new Random();
-    return random.nextInt(max - min) + min;
+  static class Coupon {
+    public String cTag;
+    public Set<String> iTags;
+    public int minPrice;
+    public int cut;
+
+    public Coupon(
+            String cTag,
+            Set<String> iTags,
+            int minPrice,
+            int cut)
+    {
+      this.cTag = cTag;
+      this.iTags = iTags;
+      this.minPrice = minPrice;
+      this.cut = cut;
+    }
   }
 
-  public static int getRandomNumber(int max, int min, HashSet<Integer> set) {
-    Random random = new Random();
-    int tmp = random.nextInt(max - min) + min;
+  static class CouponCombo {
+    public Set<String> cTags;
+    public int cut;
 
-    if (set.add(tmp)) {
-      return (tmp);
+    @Override
+    public String toString() {
+      return "CouponCombo{" +
+              "cTags=" + cTags +
+              ", cut=" + cut +
+              '}';
     }
-    return getRandomNumber(max, min, set);
+
+    public CouponCombo(
+            Set<String> cTags,
+            int cut)
+    {
+      this.cTags = cTags;
+      this.cut = cut;
+    }
   }
 
-  public static final int SHOPPINGCART = 99;
-  public static final int NUMCOUPONS = 1000;
-  public static final int NUMITEMS = 100000;
-  public static final int DISCOUNT = 50;
-  public static final int MAXPRICE = 100;
-  public static final int MINPRICE = 10;
-  public static final int MAXCOUNT = 5;
-  public static final int THRESHOLD = 1000;
-  public static List<coupon> couponList;
+  static class CartItem {
+    public String iTag;
+    public int number;
+    public int price;
 
-  public static void main(String[] args) {
-    // set all items
-    item[] allItems = new item[NUMITEMS];
-    item[] items = new item[SHOPPINGCART];
-    for (int i = 0; i < NUMITEMS; i++) {
-      allItems[i] = new item(i, getRandomNumber(MAXPRICE, MINPRICE), getRandomNumber(MAXCOUNT, 1));
+    public CartItem(
+            String iTag,
+            int number,
+            int price)
+    {
+      this.iTag = iTag;
+      this.number = number;
+      this.price = price;
     }
-
-    HashSet<Integer> nums = new HashSet<>();
-    for (int i = 0; i < SHOPPINGCART; i++) {
-      int tmp;
-      tmp = getRandomNumber(NUMITEMS, 1, nums);
-      items[i] = allItems[tmp];
-    }
-    nums.clear();
-
-    // set coupons;
-    coupon[] coupons = new coupon[NUMCOUPONS];
-    for (int i = 0; i < NUMCOUPONS; i++) {
-      List<item> combs = new ArrayList<>();
-      for (int j = 0; j < getRandomNumber(NUMITEMS, 1); j++) {
-        combs.add(allItems[getRandomNumber(NUMITEMS, 1, nums)]);
-      }
-      nums.clear();
-      coupons[i] =
-          new coupon(i, combs, getRandomNumber(DISCOUNT, 1), getRandomNumber(THRESHOLD, 100));
-    }
-
-    List<coupon> validCoupon = new ArrayList<>();
-    couponRangeShrink(items, coupons, validCoupon);
-
-    Collections.sort(validCoupon);
-    for (coupon x : validCoupon) {
-      Collections.sort(x.combination);
-      System.out.println(x);
-    }
-
-    int result = getBestOffer(validCoupon);
-    System.out.println(result);
   }
 
-  public static boolean addToSet(List<coupon> validCoupon, HashSet<item> usedItem, int i) {
-    int idx = 0;
-    int sum = 0;
-    List<Integer> temp = new ArrayList<>();
-    while (sum < validCoupon.get(i).threshold && idx < validCoupon.get(i).combination.size()) {
-      if (!usedItem.contains(validCoupon.get(i).combination.get(idx))) {
-        sum = sum + validCoupon.get(i).combination.get(idx).val;
-        temp.add(idx);
-      } else {
-        return false;
-      }
-      idx++;
-    }
-    if (sum >= validCoupon.get(i).threshold) {
-      for (Integer x : temp) {
-        usedItem.add(validCoupon.get(i).combination.get(x));
-      }
-      return true;
-    }
-    return false;
+  public static Set<Set<String>> getAvailableCouponItems(
+          Coupon coupon,
+          Map<String, CartItem> cartItems,
+          Set<String> leftOverITags)
+  {
+    int minPrice = coupon.minPrice;
+    Set<String> currentItags = new HashSet<String>();
+    Set<String> availableITags = new HashSet<String>(coupon.iTags);
+    Set<Set<String>> result = new HashSet<Set<String>>();
+    getAvailableCouponItemsJob(0, cartItems, leftOverITags, availableITags, currentItags, result, minPrice);
+    return result;
   }
 
-  public static void couponRangeShrink(item[] items, coupon[] coupons, List<coupon> validCoupon) {
-    for (coupon coupon : coupons) {
-      List<item> newList = new ArrayList<>();
-      coupon temp = new coupon();
-      int sum = 0;
-      for (item item : items) {
-        if (coupon.checkValidity(item)) {
-          sum = sum + item.val;
-          newList.add(item);
+  public static void getAvailableCouponItemsJob(
+          int price,
+          Map<String, CartItem> cartItems,
+          Set<String> leftOverITags,
+          Set<String> availableITags,
+          Set<String> currentItags,
+          Set<Set<String>> result,
+          int minPrice)
+  {
+    for (String iTag : availableITags) {
+      if (leftOverITags.contains(iTag)) {
+        CartItem item = cartItems.get(iTag);
+        int iPrice = item.price * item.number;
+        int newPrice = price + iPrice;
+        Set<String> newITags = new HashSet<String>(currentItags);
+        String newITagsStr = newITags.toString();
+        newITags.add(iTag);
+        if (newPrice >= minPrice) {
+          result.add(newITags);
+        } else {
+          Set<String> newAvailableITags = new HashSet<String>(availableITags);
+          newAvailableITags.remove(iTag);
+          getAvailableCouponItemsJob(
+                  newPrice,
+                  cartItems,
+                  leftOverITags,
+                  newAvailableITags,
+                  newITags,
+                  result,
+                  minPrice);
         }
       }
-      if (newList.size() > 0 && sum >= coupon.threshold) {
-        temp.cloneCoupon(coupon, newList);
-        validCoupon.add(temp);
-      }
     }
   }
 
-  public static int getBestOffer(List<coupon> validCoupon) {
-    int bestDiscount = 0;
-    HashSet<item> usedItem = new HashSet<>();
-    for (int i = 0; i < validCoupon.size(); i++) {
-      int sum = 0;
-      if (addToSet(validCoupon, usedItem, i)) {
-        sum = validCoupon.get(i).discount;
-      }
+  public static CouponCombo computeCouponCombo(
+          Map<String, Coupon> coupons,
+          Map<String, CartItem> items)
+  {
+    Map<String, CouponCombo> mem = new HashMap<String, CouponCombo>();
+    CouponCombo bestCombo = new CouponCombo(new HashSet<String>(), 0);
+    CouponCombo currentCombo = new CouponCombo(new HashSet<String>(), 0);
+    Set<String> removedITags = new HashSet<String>();
+    Set<String> leftOverITags = new HashSet<String>(items.keySet());
+    computeCouponComboJob(
+            coupons,
+            items,
+            mem,
+            currentCombo,
+            bestCombo,
+            removedITags,
+            leftOverITags);
 
-      for (int j = i + 1; j < validCoupon.size(); j++) {
-        if (addToSet(validCoupon, usedItem, j)) {
-          sum = sum + validCoupon.get(j).discount;
-        }
-      }
-      bestDiscount = Math.max(sum, bestDiscount);
-      usedItem.clear();
+    return bestCombo;
+  }
+
+  public static void computeCouponComboJob(
+          Map<String, Coupon> coupons,
+          Map<String, CartItem> items,
+          Map<String, CouponCombo> mem,
+          CouponCombo prevCombo,
+          CouponCombo bestCombo,
+          Set<String> removedITags,
+          Set<String> leftOverITags)
+  {
+    if (leftOverITags.isEmpty()) {
+      return;
     }
-    return bestDiscount;
+
+    for (String cTag : coupons.keySet()) {
+      System.out.println("Checking coupon " + cTag + " on items " + leftOverITags.toString());
+      Coupon coupon = coupons.get(cTag);
+      Set<String> currentCTags = new HashSet<String>(prevCombo.cTags);
+      currentCTags.add(cTag);
+      int currentCut = prevCombo.cut + coupon.cut;
+      System.out.println("    Getting coupon " + coupon.cTag + " items for items: " + leftOverITags.toString());
+      Set<Set<String>> removedItemCombination = getAvailableCouponItems(coupon, items, leftOverITags);
+      System.out.println("    Result is: " + removedItemCombination.toString());
+      Map<String, Coupon> newCoupons = new HashMap<String, Coupon>(coupons);
+      newCoupons.remove(cTag);
+      System.out.println("    new Coupons: " + newCoupons.toString());
+      String removeCombi = removedItemCombination.toString();
+      for (Set<String> iTags : removedItemCombination) {
+        System.out.println("    Try remove items: " + iTags.toString());
+        Set<String> newLeftOverITags = new HashSet<String>(leftOverITags);
+        newLeftOverITags.removeAll(iTags);
+        Set<String> totalRemovedITags = new HashSet<String>();
+        totalRemovedITags.addAll(removedITags);
+        totalRemovedITags.addAll(iTags);
+        String key = totalRemovedITags.toString();
+
+        if (mem.containsKey(key)) {
+          CouponCombo a = mem.get(key);
+          String b = mem.get(key).toString();
+          System.out.println("        Found collision: " + key + " with combo: " + mem.get(key).toString());
+        }
+
+        if (mem.containsKey(key) && mem.get(key).cut >= currentCut) {
+          System.out.println("        Colide, skip.");
+          return;
+        }
+
+        CouponCombo currentCombo = new CouponCombo(currentCTags, currentCut);
+        System.out.println("        Add combo key: " + key + " value: " + currentCombo.toString() + " to mem.");
+        mem.put(key, currentCombo);
+
+        if (bestCombo.cut < currentCombo.cut) {
+          bestCombo.cTags = currentCombo.cTags;
+          bestCombo.cut = currentCombo.cut;
+        }
+
+        System.out.println("        Proceed to next.");
+        computeCouponComboJob(newCoupons, items, mem, currentCombo, bestCombo, totalRemovedITags, newLeftOverITags);
+      }
+    }
+  }
+  public static void main(String[] args ){
+    CartItem item1 = new CartItem("A",1,3);
+    CartItem item2 = new CartItem("B",3,4);
+    CartItem item3 = new CartItem("C",2,5);
+    HashSet<String> h1 = new HashSet<>();
+    h1.add("A");
+    h1.add("B");
+    h1.add("C");
+    HashSet<String> h2 = new HashSet<>();
+    h2.add("A");
+    h2.add("B");
+
+    HashSet<String> h3 = new HashSet<>();
+    h3.add("B");
+
+    Coupon c1 = new Coupon("abc",h1,4,3);
+    Coupon c2 = new Coupon("ab",h2,2,5);
+    Coupon c3 = new Coupon("b",h3,1,2);
+
+    Map<String, Coupon> coupons = new HashMap<>();
+    coupons.put("abc",c1);
+    coupons.put("ab",c2);
+    coupons.put("b",c3);
+
+    Map<String, CartItem> items = new HashMap<>();
+    items.put("A",item1);
+    items.put("B",item2);
+    items.put("C",item3);
+
+    System.out.println(computeCouponCombo(coupons,items));
+
   }
 }
