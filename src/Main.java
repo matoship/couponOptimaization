@@ -1,61 +1,61 @@
 import java.util.*;
+class Coupon {
+  public String cTag;
+  public Set<String> iTags;
+  public int minPrice;
+  public int cut;
+
+  public Coupon(
+          String cTag,
+          Set<String> iTags,
+          int minPrice,
+          int cut)
+  {
+    this.cTag = cTag;
+    this.iTags = iTags;
+    this.minPrice = minPrice;
+    this.cut = cut;
+  }
+}
+
+class CouponCombo {
+  public Set<String> cTags;
+  public int cut;
+
+  @Override
+  public String toString() {
+    return "CouponCombo{" +
+            "cTags=" + cTags +
+            ", cut=" + cut +
+            '}';
+  }
+
+  public CouponCombo(
+          Set<String> cTags,
+          int cut)
+  {
+    this.cTags = cTags;
+    this.cut = cut;
+  }
+}
+
+class CartItem {
+  public String iTag;
+  public int number;
+  public int price;
+
+  public CartItem(
+          String iTag,
+          int number,
+          int price)
+  {
+    this.iTag = iTag;
+    this.number = number;
+    this.price = price;
+  }
+}
 
 public class Main {
-  static class Coupon {
-    public String cTag;
-    public Set<String> iTags;
-    public int minPrice;
-    public int cut;
-
-    public Coupon(
-            String cTag,
-            Set<String> iTags,
-            int minPrice,
-            int cut)
-    {
-      this.cTag = cTag;
-      this.iTags = iTags;
-      this.minPrice = minPrice;
-      this.cut = cut;
-    }
-  }
-
-  static class CouponCombo {
-    public Set<String> cTags;
-    public int cut;
-
-    @Override
-    public String toString() {
-      return "CouponCombo{" +
-              "cTags=" + cTags +
-              ", cut=" + cut +
-              '}';
-    }
-
-    public CouponCombo(
-            Set<String> cTags,
-            int cut)
-    {
-      this.cTags = cTags;
-      this.cut = cut;
-    }
-  }
-
-  static class CartItem {
-    public String iTag;
-    public int number;
-    public int price;
-
-    public CartItem(
-            String iTag,
-            int number,
-            int price)
-    {
-      this.iTag = iTag;
-      this.number = number;
-      this.price = price;
-    }
-  }
 
   public static Set<Set<String>> getAvailableCouponItems(
           Coupon coupon,
